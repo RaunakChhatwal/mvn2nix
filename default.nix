@@ -1,25 +1,12 @@
-{ nixpkgs ? (import ./nix/sources.nix).nixpkgs,
-  system ? builtins.currentSystem }:
-let
-  sources = import ./nix/sources.nix;
-  pkgs = import nixpkgs {
-    overlays = [
-      (_: super: {
-        niv = (import sources.niv { }).niv;
-        # include local sources in your Nix projects, while taking gitignore files into account
-        # https://github.com/hercules-ci/gitignore.nix
-        gitignoreSource = (import sources.gitignore { inherit (super) lib; }).gitignoreSource;
-      })
-      (import ./overlay.nix)
-    ];
-    inherit system;
-  };
-in {
-  mvn2nix = pkgs.mvn2nix;
+{ pkgs ? import <nixpkgs> {} }:
+rec {
+  buildMavenRepository =
+    (pkgs.callPackage ./maven.nix {}).buildMavenRepository;
 
-  mvn2nix-bootstrap = pkgs.mvn2nix-bootstrap;
+  buildMavenRepositoryFromLockFile =
+    (pkgs.callPackage ./maven.nix {}).buildMavenRepositoryFromLockFile;
 
-  buildMavenRepository = pkgs.buildMavenRepository;
+  mvn2nix = pkgs.callPackage ./derivation.nix { inherit buildMavenRepositoryFromLockFile; };
 
-  buildMavenRepositoryFromLockFile = pkgs.buildMavenRepositoryFromLockFile;
+  mvn2nix-bootstrap = pkgs.callPackage ./derivation.nix { bootstrap = true; inherit buildMavenRepositoryFromLockFile; };
 }

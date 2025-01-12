@@ -3,28 +3,13 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    utils.url = "github:numtide/flake-utils";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, utils }:
-  let
-    # put devShell and any other required packages into local overlay
-    localOverlay = import ./overlay.nix;
-
-    pkgsForSystem = system: import nixpkgs {
-      overlays = [
-        localOverlay
-      ];
-      inherit system;
-    };
-  in utils.lib.eachSystem utils.lib.defaultSystems (system: rec {
-    legacyPackages = pkgsForSystem system;
-    packages = utils.lib.flattenTree {
-      inherit (legacyPackages) mvn2nix mvn2nix-bootstrap buildMavenRepository buildMavenRepositoryFromLockFile;
-    };
+  outputs = { self, nixpkgs, flake-utils }:
+  flake-utils.lib.eachDefaultSystem (system: rec {
+    packages = import ./default.nix { pkgs = import nixpkgs { inherit system; }; };
     defaultPackage = packages.mvn2nix;
-    apps.mvn2nix = utils.lib.mkApp { drv = packages.mvn2nix; };
-  }) // {
-    overlay = localOverlay;
-  };
+    apps.mvn2nix = flake-utils.lib.mkApp { drv = packages.mvn2nix; };
+  });
 }
